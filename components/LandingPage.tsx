@@ -195,7 +195,14 @@ export default function LandingPage() {
           body: JSON.stringify({ agent_id: agoraData.agentId }),
         });
         if (!response.ok) {
-          console.error('Failed to stop agent:', await response.text());
+          const body = await response.text();
+          // ErrConflict (400) means the agent is already shutting down — treat as success.
+          // This is a normal race between our request and the agent's own idle-timeout.
+          const isAlreadyStopping =
+            response.status === 400 && body.includes('ErrConflict');
+          if (!isAlreadyStopping) {
+            console.error('Failed to stop agent:', body);
+          }
         }
       } catch (error) {
         console.error('Error stopping agent:', error);
