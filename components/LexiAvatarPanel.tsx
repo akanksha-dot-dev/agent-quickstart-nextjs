@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useRef, useEffect } from 'react';
 import { AgentVisualizer, type AgentVisualizerState } from 'agora-agent-uikit';
 import type { BloomLevel, Subject } from '@/lib/learner';
 import { SUBJECT_EMOJIS, BLOOM_LABELS } from '@/lib/learner';
