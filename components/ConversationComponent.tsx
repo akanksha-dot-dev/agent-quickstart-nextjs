@@ -129,6 +129,10 @@ export default function ConversationComponent({
     [],
   );
 
+  // EdexConvoAI: session start time for SessionSummaryPanel
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  // EdexConvoAI: topics detected from transcript turns (lightweight heuristic)
+  const [topicsDiscussed, setTopicsDiscussed] = useState<string[]>([]);
   // EdexConvoAI: local copy of learner profile (may be updated in-session)
   // _setActiveLearnerProfile available for future in-session mastery updates
   const [activeLearnerProfile, _setActiveLearnerProfile] = useState<LearnerProfile | undefined>(
