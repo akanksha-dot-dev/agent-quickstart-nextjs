@@ -498,9 +498,54 @@ export default function ConversationComponent({
 
   useClientEvent(client, 'token-privilege-will-expire', handleTokenWillExpire);
 
+  // EdexConvoAI: Space-bar shortcut to mute/unmute (voice-native UX)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).matches('input, textarea, [contenteditable]')) return;
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        handleMicToggle();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleMicToggle]);
+
+  // EdexConvoAI: achievement detection — each achievement fires at most once per session
+  useEffect(() => {
+    if (messageList.length > 0) {
+      triggerAchievement({ id: 'first_word', title: 'Session Live! 🎙️', variant: 'cyan', icon: 'book', description: 'Lexi is listening — the conversation has started.' });
+    }
+  }, [messageList.length, triggerAchievement]);
+
+  useEffect(() => {
+    if (!activeLearnerProfile) return;
+    const { streakCount, bloomLevel } = activeLearnerProfile;
+    if (streakCount >= 3) triggerAchievement({ id: 'streak_3', title: 'On Fire! 🔥', variant: 'orange', icon: 'flame', description: '3 correct answers in a row — you\'re rolling!' });
+    if (streakCount >= 5) triggerAchievement({ id: 'streak_5', title: '5 Streak! ⚡', variant: 'gold', icon: 'zap', description: 'Five in a row. You\'re mastering this!' });
+    if (bloomLevel >= 4) triggerAchievement({ id: 'bloom_4', title: 'Deep Thinker 🧠', variant: 'purple', icon: 'brain', description: 'Reached Bloom Level 4 — Analysis. Impressive!' });
+    if (bloomLevel >= 6) triggerAchievement({ id: 'bloom_6', title: 'Creator Level! 🌟', variant: 'gold', icon: 'star', description: 'Bloom Level 6 — Create. Top of the taxonomy!' });
+  }, [activeLearnerProfile, triggerAchievement]);
+
+  useEffect(() => {
+    if (topicsDiscussed.length >= 3) {
+      triggerAchievement({ id: 'topics_3', title: 'Explorer! 🗺️', variant: 'green', icon: 'map', description: `3 topics explored in this session.` });
+    }
+  }, [topicsDiscussed.length, triggerAchievement]);
+
+  // EdexConvoAI: session XP (0-100)
+  const sessionXP = useMemo(() => {
+    if (!activeLearnerProfile) return undefined;
+    const topicXP   = Math.min(topicsDiscussed.length * 8, 40);
+    const streakXP  = Math.min(activeLearnerProfile.streakCount * 5, 25);
+    const bloomXP   = (activeLearnerProfile.bloomLevel - 1) * 7;
+    return Math.min(100, topicXP + streakXP + bloomXP);
+  }, [activeLearnerProfile, topicsDiscussed.length]);
+
   const handleEndConversation = useCallback(async () => {
     onEndConversation();
   }, [onEndConversation]);
+
 
   // EdexConvoAI: derive galaxy nodes from active profile mastery scores
   const galaxyNodes = useMemo(() => {
