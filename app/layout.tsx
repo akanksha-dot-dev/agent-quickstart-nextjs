@@ -8,9 +8,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Talk to your voice agent | Agora',
+  title: 'EdexConvoAI — Adaptive Voice Tutor | Powered by Agora',
   description:
-    "Next.js quickstart: real-time voice agent with live transcript, streaming audio, and low latency from Agora's Conversational AI Engine—API routes in one repo.",
+    'Real-time adaptive AI tutoring platform. Study Partner, Viva Prep, Quiz Mode, and Revision Sprint — all through natural voice conversation powered by Agora Conversational AI Engine.',
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -39,8 +39,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full min-h-screen">{children}</body>
+    // suppressHydrationWarning on <html>+<body>: browser extensions (Grammarly, js-focus-visible)
+    // inject attributes after SSR that React cannot predict. This silences ONLY these two root
+    // elements and does not suppress warnings in any child component.
+    // See: https://nextjs.org/docs/messages/react-hydration-error
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      <body className="h-full min-h-screen" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
