@@ -44,9 +44,12 @@ export function SessionReportCard({
 }: SessionReportCardProps) {
   const [copying, setCopying] = useState(false);
 
+  const [now, setNow] = useState<number>(0);
+  useEffect(() => { setNow(Date.now()); }, []);
+
   const elapsedMinutes = Math.max(
     1,
-    Math.floor((Date.now() - sessionStartTime) / 60000),
+    now > 0 ? Math.floor((now - sessionStartTime) / 60000) : 0,
   );
 
   const { strengths, weakAreas, recommendations, overallScore } = useMemo(() => {
