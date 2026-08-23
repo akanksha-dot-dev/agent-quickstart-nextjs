@@ -79,12 +79,6 @@ export function EdexOnboardingCard({
     onStartConversation(manager.getProfile());
   }, [name, subject, bloomLevel, analogyDomain, onStartConversation]);
 
-  const canAdvance = useCallback(() => {
-    if (step === 'subject') return true;
-    if (step === 'bloom') return true;
-    if (step === 'analogy') return true;
-    return false;
-  }, [step]);
 
   const stepIndex = ['subject', 'bloom', 'analogy', 'ready'].indexOf(step);
 

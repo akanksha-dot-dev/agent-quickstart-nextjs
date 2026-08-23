@@ -21,7 +21,6 @@ const LEVEL_LABELS: BloomLevel[] = [1, 2, 3, 4, 5, 6];
 
 export function BloomHUDPanel({ bloomLevel, streakCount }: BloomHUDPanelProps) {
   const color = BLOOM_COLORS[bloomLevel];
-  const progress = ((bloomLevel - 1) / 5) * 100;
 
   return (
     <div className="space-y-2">
