@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AgentVisualizer } from 'agora-agent-uikit';
+import { AgentVisualizer, type AgentVisualizerState } from 'agora-agent-uikit';
 import type { BloomLevel, Subject } from '@/lib/learner';
 import { SUBJECT_EMOJIS, BLOOM_LABELS } from '@/lib/learner';
 
-type VisualizerState = 'idle' | 'listening' | 'speaking' | 'thinking' | 'connecting';
+type VisualizerState = AgentVisualizerState;
 
 type LexiAvatarPanelProps = {
   visualizerState: VisualizerState;
@@ -27,17 +27,7 @@ const STATE_CONFIG: Record<
     dotColor: string;
   }
 > = {
-  idle: {
-    label: 'Ready when you are…',
-    labelColor: 'hsl(245 30% 55%)',
-    ring1Color: 'hsl(245 60% 55% / 0.18)',
-    ring2Color: 'hsl(245 60% 55% / 0.06)',
-    glowColor: 'hsl(245 60% 55% / 0.12)',
-    ring1Duration: '8s',
-    ring2Duration: '14s',
-    dotColor: 'hsl(245 60% 65%)',
-  },
-  connecting: {
+  'not-joined': {
     label: 'Connecting to Lexi…',
     labelColor: 'hsl(38 92% 60%)',
     ring1Color: 'hsl(38 92% 55% / 0.25)',
@@ -46,6 +36,26 @@ const STATE_CONFIG: Record<
     ring1Duration: '3s',
     ring2Duration: '5s',
     dotColor: 'hsl(38 92% 65%)',
+  },
+  joining: {
+    label: 'Joining session…',
+    labelColor: 'hsl(38 92% 60%)',
+    ring1Color: 'hsl(38 92% 55% / 0.28)',
+    ring2Color: 'hsl(38 92% 55% / 0.10)',
+    glowColor: 'hsl(38 92% 55% / 0.16)',
+    ring1Duration: '2s',
+    ring2Duration: '3.5s',
+    dotColor: 'hsl(38 92% 65%)',
+  },
+  ambient: {
+    label: 'Ready when you are…',
+    labelColor: 'hsl(245 30% 55%)',
+    ring1Color: 'hsl(245 60% 55% / 0.18)',
+    ring2Color: 'hsl(245 60% 55% / 0.06)',
+    glowColor: 'hsl(245 60% 55% / 0.12)',
+    ring1Duration: '8s',
+    ring2Duration: '14s',
+    dotColor: 'hsl(245 60% 65%)',
   },
   listening: {
     label: 'Lexi is listening…',
@@ -57,7 +67,7 @@ const STATE_CONFIG: Record<
     ring2Duration: '7s',
     dotColor: 'hsl(194 100% 65%)',
   },
-  thinking: {
+  analyzing: {
     label: 'Lexi is thinking…',
     labelColor: 'hsl(38 92% 60%)',
     ring1Color: 'hsl(38 92% 55% / 0.28)',
@@ -67,7 +77,7 @@ const STATE_CONFIG: Record<
     ring2Duration: '4s',
     dotColor: 'hsl(38 92% 65%)',
   },
-  speaking: {
+  talking: {
     label: 'Lexi is speaking',
     labelColor: 'hsl(270 70% 70%)',
     ring1Color: 'hsl(270 70% 65% / 0.32)',
@@ -76,6 +86,16 @@ const STATE_CONFIG: Record<
     ring1Duration: '1.8s',
     ring2Duration: '3s',
     dotColor: 'hsl(270 70% 72%)',
+  },
+  disconnected: {
+    label: 'Disconnected',
+    labelColor: 'hsl(0 60% 55%)',
+    ring1Color: 'hsl(0 60% 50% / 0.2)',
+    ring2Color: 'hsl(0 60% 50% / 0.08)',
+    glowColor: 'hsl(0 60% 50% / 0.10)',
+    ring1Duration: '6s',
+    ring2Duration: '10s',
+    dotColor: 'hsl(0 60% 60%)',
   },
 };
 

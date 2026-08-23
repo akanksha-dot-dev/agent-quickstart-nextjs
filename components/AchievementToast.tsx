@@ -115,7 +115,9 @@ export function AchievementToast({ achievements }: AchievementToastProps) {
               className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
               style={{ background: `${style.iconColor}22`, border: `1px solid ${style.iconColor}44` }}
             >
-              <Icon className="h-4 w-4" style={{ color: style.iconColor }} />
+            <span style={{ color: style.iconColor, display: 'flex' }}>
+              <Icon className="h-4 w-4" />
+            </span>
             </div>
 
             {/* Text */}

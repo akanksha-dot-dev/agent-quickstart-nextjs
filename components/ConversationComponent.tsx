@@ -588,6 +588,7 @@ export default function ConversationComponent({
   }, [messageList, client.uid]);
 
   return (
+    <>
     <QuickstartConversationLayout
       statusPanel={
         <ConnectionStatusPanel
@@ -607,18 +608,17 @@ export default function ConversationComponent({
         />
       }
       visualizer={
-        <div
-          className="relative flex h-full min-h-[20rem] w-full max-w-4xl items-center justify-center"
-          role="region"
-          aria-label="AI agent status visualization"
+        <LexiAvatarPanel
+          visualizerState={visualizerState}
+          subject={activeLearnerProfile?.subject}
+          bloomLevel={activeLearnerProfile?.bloomLevel}
         >
-          <AgentVisualizer state={visualizerState} size="lg" />
           {remoteUsers.map((user) => (
             <div key={user.uid} className="hidden">
               <RemoteUser user={user} />
             </div>
           ))}
-        </div>
+        </LexiAvatarPanel>
       }
       controls={
         <div
@@ -671,6 +671,15 @@ export default function ConversationComponent({
           />
         ) : undefined
       }
+      learningFact={
+        activeLearnerProfile ? (
+          <LearningFactTicker subject={activeLearnerProfile.subject} />
+        ) : undefined
+      }
+      sessionXP={sessionXP}
     />
+    {/* Achievement toasts — rendered outside layout to avoid stacking context issues */}
+    <AchievementToast achievements={achievements} />
+    </>
   );
 }

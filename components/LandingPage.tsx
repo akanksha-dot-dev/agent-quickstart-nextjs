@@ -14,6 +14,8 @@ import { LearnerProfileManager } from '@/lib/learner';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { EdexOnboardingCard } from './EdexOnboardingCard';
+import { AnimatedBackground } from './AnimatedBackground';
+import { SessionReportCard } from './SessionReportCard';
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -71,6 +73,9 @@ export default function LandingPage() {
   const [rtmClient, setRtmClient] = useState<RTMClient | null>(null);
   const [agentJoinError, setAgentJoinError] = useState(false);
   const [learnerProfile, setLearnerProfile] = useState<LearnerProfile | null>(null);
+  const [showReport, setShowReport] = useState(false);
+  const sessionStartTimeRef = useRef<number>(0);
+  const topicsDiscussedRef = useRef<string[]>([]);
 
   // Load saved profile from localStorage on mount (client-only)
   const [savedProfile, setSavedProfile] = useState<LearnerProfile | null>(null);
@@ -84,6 +89,9 @@ export default function LandingPage() {
     setError(null);
     setAgentJoinError(false);
     setLearnerProfile(profile);
+    setShowReport(false);
+    sessionStartTimeRef.current = Date.now();
+    topicsDiscussedRef.current = [];
 
     try {
       // 1. Fetch RTC token + channel
@@ -220,6 +228,8 @@ export default function LandingPage() {
     rtmClient?.logout().catch((err) => console.error('RTM logout error:', err));
     setRtmClient(null);
     setShowConversation(false);
+    // Show the session report card before returning to onboarding
+    if (learnerProfile) setShowReport(true);
   };
 
   return (
@@ -227,15 +237,8 @@ export default function LandingPage() {
       className="relative flex h-dvh min-h-screen flex-col overflow-hidden text-foreground"
       style={{ background: 'hsl(230 35% 4%)' }}
     >
-      {/* Subtle nebula background gradient */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(245 60% 12% / 0.6) 0%, transparent 70%), radial-gradient(ellipse 60% 50% at 80% 80%, hsl(270 40% 10% / 0.5) 0%, transparent 70%)',
-        }}
-        aria-hidden="true"
-      />
+      {/* Animated nebula background */}
+      <AnimatedBackground />
 
       {/* Hero shell: either shows the pre-call onboarding or swaps in the live conversation. */}
       <div
@@ -310,6 +313,24 @@ export default function LandingPage() {
           </a>
         </div>
       </footer>
+      {/* Session report card — shown after conversation ends */}
+      {showReport && learnerProfile && (
+        <SessionReportCard
+          profile={learnerProfile}
+          sessionStartTime={sessionStartTimeRef.current}
+          topicsDiscussed={topicsDiscussedRef.current}
+          onClose={(summary) => {
+            // Persist the summary for cross-session AI memory
+            const manager = LearnerProfileManager.load();
+            if (manager) {
+              const updated = { ...manager.getProfile(), previousSessionSummary: summary };
+              new LearnerProfileManager(updated).save();
+              setSavedProfile(updated);
+            }
+            setShowReport(false);
+          }}
+        />
+      )}
     </div>
   );
 }
