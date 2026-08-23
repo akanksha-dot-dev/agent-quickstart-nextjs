@@ -16,9 +16,11 @@ export function SessionSummaryPanel({
   sessionStartTime,
   topicsDiscussed,
 }: SessionSummaryPanelProps) {
-  // Update elapsed time every 30s without calling Date.now impurely during render
-  const [now, setNow] = useState<number>(() => Date.now());
+  // Initialize to 0 on both server and client to avoid SSR hydration mismatch.
+  // Date.now() is set only after mount (client-side only).
+  const [now, setNow] = useState<number>(0);
   useEffect(() => {
+    setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
