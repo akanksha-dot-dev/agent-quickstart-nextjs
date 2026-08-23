@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { TrendingUp, Clock, Target, Flame } from 'lucide-react';
 import type { LearnerProfile } from '@/lib/learner';
 import { SUBJECT_LABELS, SUBJECT_EMOJIS, BLOOM_LABELS } from '@/lib/learner';
@@ -16,10 +16,17 @@ export function SessionSummaryPanel({
   sessionStartTime,
   topicsDiscussed,
 }: SessionSummaryPanelProps) {
+  // Update elapsed time every 30s without calling Date.now impurely during render
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const elapsedMinutes = useMemo(() => {
-    const ms = Date.now() - sessionStartTime;
+    const ms = now - sessionStartTime;
     return Math.max(0, Math.floor(ms / 60000));
-  }, [sessionStartTime]);
+  }, [now, sessionStartTime]);
 
   const masteryEntries = useMemo(() => {
     return Object.entries(profile.masteryScores)

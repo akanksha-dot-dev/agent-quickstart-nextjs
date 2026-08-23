@@ -237,6 +237,14 @@ export function KnowledgeGalaxyPanel({
   }, [nodes, subject, bloomLevel, activeTopic, streakCount]);
 
 
+  // Start the animation loop; restart whenever drawRef updates (deps changed)
+  useEffect(() => {
+    const loop = () => {
+      drawRef.current();
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [nodes, subject, bloomLevel, activeTopic, streakCount]);
 
   return (
     <div className="flex flex-col gap-2 h-full">
