@@ -112,7 +112,7 @@ export function LexiAvatarPanel({
   bloomLevel,
   children,
 }: LexiAvatarPanelProps) {
-  const cfg = STATE_CONFIG[visualizerState] ?? STATE_CONFIG.idle;
+  const cfg = STATE_CONFIG[visualizerState] ?? STATE_CONFIG['ambient'];
 
   const subjectEmoji = subject ? SUBJECT_EMOJIS[subject] : '🤖';
   const bloomLabel = bloomLevel ? BLOOM_LABELS[bloomLevel] : null;
