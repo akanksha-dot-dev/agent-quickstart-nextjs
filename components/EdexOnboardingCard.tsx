@@ -116,38 +116,41 @@ export function EdexOnboardingCard({
             EdexConvoAI
           </span>
         </div>
-        <h1
-          className="edex-font-heading text-2xl font-semibold leading-tight text-white"
-        >
+        <h1 className="edex-font-heading text-2xl font-semibold leading-tight text-white">
           {step === 'welcome' && savedProfile
-            ? `Welcome back, ${savedProfile.name}!`
+            ? `Welcome back, ${savedProfile.name || 'Learner'}!`
             : step === 'subject'
             ? 'What are you learning?'
+            : step === 'mode'
+            ? 'Choose your learning mode'
             : step === 'bloom'
             ? 'Your challenge level'
             : step === 'analogy'
             ? 'Your learning style'
-            : 'Ready to learn?'}
+            : 'Ready to start!'}
         </h1>
         <p className="mt-1 text-sm" style={{ color: 'hsl(245 30% 65%)' }}>
           {step === 'welcome' && savedProfile
-            ? `${SUBJECT_EMOJIS[savedProfile.subject]} ${SUBJECT_LABELS[savedProfile.subject]} · Bloom Level ${savedProfile.bloomLevel}: ${BLOOM_LABELS[savedProfile.bloomLevel]}`
+            ? `${SUBJECT_EMOJIS[savedProfile.subject]} ${SUBJECT_LABELS[savedProfile.subject]} · ${LEARNING_MODE_LABELS[savedProfile.learningMode ?? 'study_partner']} · Bloom L${savedProfile.bloomLevel}`
             : step === 'subject'
-            ? 'Pick a subject to explore with Lexi, your AI tutor'
+            ? 'Pick a subject and tell Lexi your name'
+            : step === 'mode'
+            ? 'Each mode changes how Lexi teaches you'
             : step === 'bloom'
             ? 'Choose your current cognitive challenge level'
             : step === 'analogy'
             ? 'Lexi will explain concepts using your chosen domain'
-            : 'Lexi will personalize every response just for you'}
+            : 'Lexi will personalise every response just for you'}
         </p>
       </div>
 
       {/* Step progress bar (skip on welcome) */}
       {step !== 'welcome' && (
         <div className="mx-8 mb-5 flex gap-1.5">
-          {['subject', 'bloom', 'analogy', 'ready'].map((s, i) => (
+          {['subject', 'mode', 'bloom', 'analogy', 'ready'].map((s, i) => (
             <div
               key={s}
+              title={s}
               className="h-0.5 flex-1 rounded-full transition-all duration-500"
               style={{
                 background:
@@ -174,15 +177,40 @@ export function EdexOnboardingCard({
               }}
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-white">Continue last session</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-white">Continue last session</p>
+                    {savedProfile.learningMode && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                        style={{
+                          background: 'hsl(245 100% 70% / 0.12)',
+                          color: 'hsl(245 100% 75%)',
+                          border: '1px solid hsl(245 100% 70% / 0.25)',
+                        }}
+                      >
+                        {LEARNING_MODE_EMOJIS[savedProfile.learningMode]} {LEARNING_MODE_LABELS[savedProfile.learningMode]}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs mt-0.5" style={{ color: 'hsl(245 30% 65%)' }}>
                     {SUBJECT_EMOJIS[savedProfile.subject]}{' '}
-                    {SUBJECT_LABELS[savedProfile.subject]} ·{' '}
-                    {savedProfile.streakCount} streak · Session {savedProfile.totalSessions}
+                    {SUBJECT_LABELS[savedProfile.subject]} · 🔥 {savedProfile.streakCount} streak · Session {savedProfile.totalSessions}
                   </p>
+                  {savedProfile.previousSessionSummary && (
+                    <p
+                      className="mt-2 text-[11px] leading-snug rounded-lg px-2.5 py-1.5"
+                      style={{
+                        color: 'hsl(245 20% 60%)',
+                        background: 'hsl(245 30% 8%)',
+                        border: '1px solid hsl(245 30% 16%)',
+                      }}
+                    >
+                      📋 {savedProfile.previousSessionSummary}
+                    </p>
+                  )}
                 </div>
-                <ChevronRight className="h-4 w-4" style={{ color: 'hsl(var(--edex-glow))' }} />
+                <ChevronRight className="ml-3 h-4 w-4 shrink-0" style={{ color: 'hsl(var(--edex-glow))' }} />
               </div>
             </button>
 

@@ -129,6 +129,16 @@ export function QuickstartConversationLayout({
               {visualizer}
             </div>
             <div className="shrink-0 pt-4">{controls}</div>
+            {/* Keyboard shortcut hints — voice-native discovery */}
+            <div
+              className="mx-auto mt-3 flex items-center gap-4 animate-fade-up"
+              style={{ animationDelay: '2s', animationFillMode: 'both', opacity: 0 }}
+              aria-label="Keyboard shortcuts"
+            >
+              <KbHint keys={['Space']} label="Mute / Unmute" />
+              <span style={{ color: 'hsl(245 30% 28%)' }}>·</span>
+              <KbHint keys={['Esc']} label="Exit fullscreen" />
+            </div>
           </div>
         </main>
 
@@ -144,6 +154,30 @@ export function QuickstartConversationLayout({
           </aside>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Tiny keyboard shortcut badge — rendered inside the conversation view */
+function KbHint({ keys, label }: { keys: string[]; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {keys.map((k) => (
+        <kbd
+          key={k}
+          className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded px-1.5 text-[10px] font-bold"
+          style={{
+            background: 'hsl(245 30% 10%)',
+            border: '1px solid hsl(245 30% 22%)',
+            color: 'hsl(245 30% 55%)',
+            fontFamily: 'ui-monospace, monospace',
+            boxShadow: '0 1px 0 hsl(245 30% 18%)',
+          }}
+        >
+          {k}
+        </kbd>
+      ))}
+      <span className="text-[10px]" style={{ color: 'hsl(245 30% 38%)' }}>{label}</span>
     </div>
   );
 }

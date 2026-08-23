@@ -78,18 +78,18 @@ export async function POST(request: NextRequest) {
       // VAD controls how the agent detects the start and end of a user's turn.
       turnDetection: {
         config: {
-          speech_threshold: 0.5,
+          speech_threshold: 0.45,  // slightly more sensitive — picks up quieter speech
           start_of_speech: {
             mode: 'vad',
             vad_config: {
-              interrupt_duration_ms: 160, // ms of speech before interruption triggers
-              prefix_padding_ms: 300, // audio captured before speech is detected
+              interrupt_duration_ms: 120, // faster barge-in — student can cut in quickly
+              prefix_padding_ms: 200,
             },
           },
           end_of_speech: {
             mode: 'vad',
             vad_config: {
-              silence_duration_ms: 480, // ms of silence before turn ends
+              silence_duration_ms: 350, // shorter silence = more natural turn-taking
             },
           },
         },
@@ -123,13 +123,13 @@ export async function POST(request: NextRequest) {
       )
       .withLlm(
         new OpenAI({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4o',          // upgraded from gpt-4o-mini for better reasoning + memory
           greetingMessage: greeting,
-          failureMessage: 'Please wait a moment.',
-          maxHistory: 15,
+          failureMessage: 'One moment please.',
+          maxHistory: 50,            // full session memory — Lexi remembers everything said
           params: {
             max_tokens: 1024,
-            temperature: 0.7,
+            temperature: 0.72,       // slightly more creative for varied questioning
             top_p: 0.95,
           },
         }),
@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
       .withTts(
         new MiniMaxTTS({
           model: 'speech_2_6_turbo',
+          // Warm, clear tutor voice — appropriate for educational context
           voiceId: 'English_captivating_female1',
         }),
         // BYOK — ElevenLabs (set NEXT_ELEVENLABS_API_KEY; optional NEXT_ELEVENLABS_VOICE_ID)
@@ -165,9 +166,9 @@ export async function POST(request: NextRequest) {
       channel: channel_name,
       agentUid,
       remoteUids: [requester_id],
-      idleTimeout: 30,
-      expiresIn: ExpiresIn.hours(1),
-      debug: false, // enable debug to show restful API calls in the console
+      idleTimeout: 45,      // 45s idle before auto-disconnect (enough for thinking pauses)
+      expiresIn: ExpiresIn.hours(2),  // 2h max session for intensive revision
+      debug: false,
     });
 
     const agentId = await session.start();
