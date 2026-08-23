@@ -1,0 +1,458 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import {
+  Trophy, TrendingUp, AlertCircle, BookOpen,
+  Clock, Flame, Download, X, Star
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { LearnerProfile } from '@/lib/learner';
+import {
+  SUBJECT_LABELS, SUBJECT_EMOJIS, BLOOM_LABELS,
+  LEARNING_MODE_LABELS,
+} from '@/lib/learner';
+
+type SessionReportCardProps = {
+  profile: LearnerProfile;
+  sessionStartTime: number;
+  topicsDiscussed: string[];
+  onClose: (updatedSummary: string) => void;
+};
+
+const BLOOM_COLOR: Record<number, string> = {
+  1: 'hsl(214 89% 65%)',
+  2: 'hsl(173 80% 50%)',
+  3: 'hsl(142 71% 50%)',
+  4: 'hsl(38 92% 55%)',
+  5: 'hsl(24 95% 58%)',
+  6: 'hsl(270 70% 65%)',
+};
+
+function getGrade(score: number): { letter: string; color: string; label: string } {
+  if (score >= 85) return { letter: 'A', color: 'hsl(142 65% 52%)', label: 'Excellent' };
+  if (score >= 70) return { letter: 'B', color: 'hsl(194 80% 55%)', label: 'Good' };
+  if (score >= 55) return { letter: 'C', color: 'hsl(38 92% 55%)', label: 'Developing' };
+  if (score >= 40) return { letter: 'D', color: 'hsl(24 90% 58%)', label: 'Needs Work' };
+  return { letter: 'F', color: 'hsl(0 72% 58%)', label: 'Keep Practicing' };
+}
+
+export function SessionReportCard({
+  profile,
+  sessionStartTime,
+  topicsDiscussed,
+  onClose,
+}: SessionReportCardProps) {
+  const [copying, setCopying] = useState(false);
+
+  const elapsedMinutes = Math.max(
+    1,
+    Math.floor((Date.now() - sessionStartTime) / 60000),
+  );
+
+  const { strengths, weakAreas, recommendations, overallScore } = useMemo(() => {
+    const entries = Object.entries(profile.masteryScores);
+
+    // Merge topics discussed this session with all mastery data
+    const sessionEntries = entries.filter(
+      ([topic]) =>
+        topicsDiscussed.includes(topic) || profile.currentTopic === topic,
+    );
+
+    const allEntries = sessionEntries.length > 0 ? sessionEntries : entries;
+
+    const strong = allEntries
+      .filter(([, m]) => m.score >= 65)
+      .sort((a, b) => b[1].score - a[1].score)
+      .slice(0, 3)
+      .map(([t, m]) => ({ topic: t, score: m.score }));
+
+    const weak = allEntries
+      .filter(([, m]) => m.score < 65)
+      .sort((a, b) => a[1].score - b[1].score)
+      .slice(0, 3)
+      .map(([t, m]) => ({ topic: t, score: m.score }));
+
+    // Recommendations: weak areas + topics not yet explored
+    const recs = [
+      ...weak.map((w) => w.topic),
+      ...topicsDiscussed.filter(
+        (t) => !entries.find(([topic]) => topic === t),
+      ),
+    ].slice(0, 3);
+
+    // Overall score: average mastery weighted by streak and bloom level
+    const avgMastery =
+      allEntries.length > 0
+        ? allEntries.reduce((s, [, m]) => s + m.score, 0) / allEntries.length
+        : profile.streakCount * 8; // fallback: estimate from streak
+
+    const score = Math.min(
+      100,
+      Math.round(
+        avgMastery * 0.6 +
+          profile.bloomLevel * 5 +
+          Math.min(profile.streakCount * 3, 15),
+      ),
+    );
+
+    return { strengths: strong, weakAreas: weak, recommendations: recs, overallScore: score };
+  }, [profile, topicsDiscussed]);
+
+  const grade = getGrade(overallScore);
+
+  const summaryText = useMemo(() => {
+    const sLabel = SUBJECT_LABELS[profile.subject];
+    const mLabel = LEARNING_MODE_LABELS[profile.learningMode ?? 'study_partner'];
+    const strList = strengths.map((s) => s.topic).join(', ') || 'foundational concepts';
+    const weakList = weakAreas.map((w) => w.topic).join(', ') || 'deeper application';
+    return `Session ${profile.totalSessions}: ${mLabel} on ${sLabel}. Bloom Level ${profile.bloomLevel} — ${BLOOM_LABELS[profile.bloomLevel]}. ${elapsedMinutes} min. Strong on: ${strList}. Needs work: ${weakList}.`;
+  }, [profile, strengths, weakAreas, elapsedMinutes]);
+
+  const handleCopyReport = async () => {
+    const report = `
+EdexConvoAI — Session Report
+==============================
+Student: ${profile.name}
+Subject: ${SUBJECT_LABELS[profile.subject]}
+Mode: ${LEARNING_MODE_LABELS[profile.learningMode ?? 'study_partner']}
+Date: ${new Date().toLocaleDateString()}
+Duration: ${elapsedMinutes} minutes
+Bloom Level: ${profile.bloomLevel} — ${BLOOM_LABELS[profile.bloomLevel]}
+Streak: ${profile.streakCount}
+Overall Score: ${overallScore}% (${grade.letter} — ${grade.label})
+
+✅ STRENGTHS
+${strengths.length > 0 ? strengths.map((s) => `  • ${s.topic} (${s.score}/100)`).join('\n') : '  • Session just started — keep going!'}
+
+⚠️  AREAS TO IMPROVE
+${weakAreas.length > 0 ? weakAreas.map((w) => `  • ${w.topic} (${w.score}/100)`).join('\n') : '  • No weak areas identified yet'}
+
+📚 RECOMMENDED REVISION
+${recommendations.length > 0 ? recommendations.map((r, i) => `  ${i + 1}. ${r}`).join('\n') : '  1. Continue current topics\n  2. Attempt next Bloom level\n  3. Explore related concepts'}
+
+Generated by EdexConvoAI — Powered by Agora Conversational AI Engine
+`.trim();
+
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopying(true);
+      setTimeout(() => setCopying(false), 2000);
+    } catch {
+      // fallback: do nothing
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'hsl(230 35% 4% / 0.92)', backdropFilter: 'blur(12px)' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Session Report Card"
+    >
+      <div
+        className="edex-font-body relative mx-auto w-full max-w-lg animate-fade-up overflow-y-auto rounded-3xl"
+        style={{
+          maxHeight: '90vh',
+          background:
+            'linear-gradient(160deg, hsl(230 35% 6%) 0%, hsl(245 50% 10%) 60%, hsl(270 40% 8%) 100%)',
+          border: '1px solid hsl(245 100% 70% / 0.20)',
+          boxShadow:
+            '0 0 0 1px hsl(245 100% 70% / 0.06), 0 32px 80px hsl(230 50% 4% / 0.9)',
+        }}
+      >
+        {/* Close button */}
+        <button
+          onClick={() => onClose(summaryText)}
+          className="absolute right-4 top-4 rounded-xl p-1.5 transition-colors hover:bg-white/10"
+          aria-label="Close report and return to home"
+        >
+          <X className="h-4 w-4" style={{ color: 'hsl(245 30% 55%)' }} />
+        </button>
+
+        {/* Header */}
+        <div className="px-6 pb-4 pt-6">
+          <div className="mb-3 flex items-center gap-2">
+            <Trophy className="h-5 w-5" style={{ color: 'hsl(45 95% 60%)' }} />
+            <span
+              className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: 'hsl(45 95% 60%)' }}
+            >
+              Session Report
+            </span>
+          </div>
+
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="edex-font-heading text-2xl font-bold text-white">
+                {profile.name}&apos;s Performance
+              </h2>
+              <p className="mt-1 text-sm" style={{ color: 'hsl(245 20% 55%)' }}>
+                {SUBJECT_EMOJIS[profile.subject]} {SUBJECT_LABELS[profile.subject]} ·{' '}
+                {LEARNING_MODE_LABELS[profile.learningMode ?? 'study_partner']} ·{' '}
+                {elapsedMinutes}m
+              </p>
+            </div>
+
+            {/* Grade badge */}
+            <div
+              className="flex flex-col items-center rounded-2xl px-5 py-3 shrink-0"
+              style={{
+                background: `${grade.color}18`,
+                border: `2px solid ${grade.color}50`,
+              }}
+            >
+              <span
+                className="edex-font-heading text-4xl font-black leading-none"
+                style={{ color: grade.color }}
+              >
+                {grade.letter}
+              </span>
+              <span className="mt-1 text-xs font-medium" style={{ color: grade.color }}>
+                {grade.label}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div className="mx-6 mb-5 grid grid-cols-3 gap-2">
+          <MiniStat
+            icon={<Star className="h-3.5 w-3.5" />}
+            value={`${overallScore}%`}
+            label="Score"
+            color="hsl(45 95% 60%)"
+          />
+          <MiniStat
+            icon={<Flame className="h-3.5 w-3.5" />}
+            value={String(profile.streakCount)}
+            label="Best Streak"
+            color="hsl(24 95% 60%)"
+          />
+          <MiniStat
+            icon={<Clock className="h-3.5 w-3.5" />}
+            value={`${elapsedMinutes}m`}
+            label="Duration"
+            color="hsl(194 80% 55%)"
+          />
+        </div>
+
+        {/* Bloom level progress */}
+        <div className="mx-6 mb-5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'hsl(245 30% 50%)' }}>
+              Bloom Level Reached
+            </span>
+            <span
+              className="rounded-full px-2.5 py-0.5 text-xs font-bold"
+              style={{
+                background: `${BLOOM_COLOR[profile.bloomLevel]}20`,
+                color: BLOOM_COLOR[profile.bloomLevel],
+                border: `1px solid ${BLOOM_COLOR[profile.bloomLevel]}40`,
+              }}
+            >
+              L{profile.bloomLevel} — {BLOOM_LABELS[profile.bloomLevel]}
+            </span>
+          </div>
+          <div
+            className="h-1.5 overflow-hidden rounded-full"
+            style={{ background: 'hsl(245 30% 14%)' }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${((profile.bloomLevel - 1) / 5) * 100}%`,
+                background: `linear-gradient(90deg, hsl(214 89% 65%), ${BLOOM_COLOR[profile.bloomLevel]})`,
+                transition: 'width 1s ease-out',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Strengths */}
+        <Section icon={<TrendingUp className="h-4 w-4" />} title="Strengths" color="hsl(142 65% 52%)">
+          {strengths.length > 0 ? (
+            <ul className="space-y-1.5">
+              {strengths.map((s) => (
+                <li key={s.topic} className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: 'hsl(245 20% 75%)' }}>
+                    {s.topic}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-1 w-16 overflow-hidden rounded-full"
+                      style={{ background: 'hsl(245 30% 18%)' }}
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${s.score}%`,
+                          background: 'hsl(142 65% 52%)',
+                        }}
+                      />
+                    </div>
+                    <span className="w-9 text-right text-xs font-bold" style={{ color: 'hsl(142 65% 60%)' }}>
+                      {s.score}%
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm" style={{ color: 'hsl(245 20% 50%)' }}>
+              Keep talking to Lexi — strengths will appear as you learn!
+            </p>
+          )}
+        </Section>
+
+        {/* Weak areas */}
+        <Section icon={<AlertCircle className="h-4 w-4" />} title="Areas to Improve" color="hsl(24 90% 58%)">
+          {weakAreas.length > 0 ? (
+            <ul className="space-y-1.5">
+              {weakAreas.map((w) => (
+                <li key={w.topic} className="flex items-center justify-between">
+                  <span className="text-sm" style={{ color: 'hsl(245 20% 75%)' }}>
+                    {w.topic}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-1 w-16 overflow-hidden rounded-full"
+                      style={{ background: 'hsl(245 30% 18%)' }}
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${w.score}%`,
+                          background: 'hsl(24 90% 58%)',
+                        }}
+                      />
+                    </div>
+                    <span className="w-9 text-right text-xs font-bold" style={{ color: 'hsl(24 90% 65%)' }}>
+                      {w.score}%
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm" style={{ color: 'hsl(245 20% 50%)' }}>
+              No weaknesses yet — great start!
+            </p>
+          )}
+        </Section>
+
+        {/* Recommendations */}
+        <Section icon={<BookOpen className="h-4 w-4" />} title="Recommended Revision" color="hsl(245 100% 72%)">
+          {recommendations.length > 0 ? (
+            <ol className="space-y-1.5 list-none">
+              {recommendations.map((r, i) => (
+                <li key={r} className="flex items-center gap-2.5">
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                    style={{
+                      background: 'hsl(245 100% 70% / 0.15)',
+                      color: 'hsl(245 100% 75%)',
+                      border: '1px solid hsl(245 100% 70% / 0.3)',
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="text-sm" style={{ color: 'hsl(245 20% 75%)' }}>
+                    {r}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm" style={{ color: 'hsl(245 20% 50%)' }}>
+              Continue your current topics to unlock revision recommendations.
+            </p>
+          )}
+        </Section>
+
+        {/* Actions */}
+        <div className="mx-6 mb-6 mt-2 flex gap-2">
+          <Button
+            onClick={handleCopyReport}
+            variant="ghost"
+            className="flex-1 rounded-xl text-sm h-10 gap-2"
+            style={{
+              background: 'hsl(245 30% 10%)',
+              border: '1px solid hsl(245 30% 20%)',
+              color: 'hsl(245 20% 65%)',
+            }}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {copying ? 'Copied!' : 'Copy Report'}
+          </Button>
+          <Button
+            onClick={() => onClose(summaryText)}
+            className="flex-[2] rounded-xl font-bold text-sm h-10"
+            style={{
+              background: 'hsl(245 100% 68%)',
+              color: 'hsl(230 35% 4%)',
+              border: 'none',
+              boxShadow: '0 0 20px hsl(245 100% 68% / 0.35)',
+            }}
+          >
+            Start New Session →
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({
+  icon,
+  title,
+  color,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  color: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mx-6 mb-4">
+      <div className="mb-2.5 flex items-center gap-2" style={{ color }}>
+        {icon}
+        <span className="text-xs font-bold uppercase tracking-widest">{title}</span>
+      </div>
+      <div
+        className="rounded-2xl p-3.5"
+        style={{ background: 'hsl(245 30% 8%)', border: '1px solid hsl(245 30% 16%)' }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({
+  icon,
+  value,
+  label,
+  color,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+  color: string;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center rounded-xl p-2.5 gap-1"
+      style={{ background: 'hsl(245 30% 8%)', border: '1px solid hsl(245 30% 16%)' }}
+    >
+      <div style={{ color }}>{icon}</div>
+      <span className="text-base font-black leading-none" style={{ color }}>
+        {value}
+      </span>
+      <span className="text-[9px] uppercase tracking-wide" style={{ color: 'hsl(245 20% 45%)' }}>
+        {label}
+      </span>
+    </div>
+  );
+}

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Loader2, BookOpen, Brain, Zap, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
+import { Loader2, BookOpen, Brain, Zap, ChevronRight, ChevronLeft, Sparkles, Users, GraduationCap, RefreshCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type {
   LearnerProfile,
   Subject,
   BloomLevel,
   AnalogyDomain,
+  LearningMode,
 } from '@/lib/learner';
 import {
   SUBJECT_LABELS,
@@ -15,6 +16,9 @@ import {
   BLOOM_LABELS,
   BLOOM_DESCRIPTIONS,
   ANALOGY_LABELS,
+  LEARNING_MODE_LABELS,
+  LEARNING_MODE_DESCRIPTIONS,
+  LEARNING_MODE_EMOJIS,
   createDefaultProfile,
   LearnerProfileManager,
 } from '@/lib/learner';
@@ -39,7 +43,16 @@ const BLOOM_COLORS: Record<BloomLevel, string> = {
   6: 'hsl(var(--bloom-6))',
 };
 
-type Step = 'welcome' | 'subject' | 'bloom' | 'analogy' | 'ready';
+const LEARNING_MODES = Object.keys(LEARNING_MODE_LABELS) as LearningMode[];
+
+const MODE_ICONS: Record<LearningMode, React.ReactNode> = {
+  study_partner: <Users className="h-4 w-4" />,
+  viva_prep:     <GraduationCap className="h-4 w-4" />,
+  quiz_mode:     <Zap className="h-4 w-4" />,
+  revision:      <RefreshCcw className="h-4 w-4" />,
+};
+
+type Step = 'welcome' | 'subject' | 'mode' | 'bloom' | 'analogy' | 'ready';
 
 export function EdexOnboardingCard({
   isLoading,
@@ -50,6 +63,7 @@ export function EdexOnboardingCard({
   const [step, setStep] = useState<Step>(savedProfile ? 'welcome' : 'subject');
   const [name, setName] = useState(savedProfile?.name ?? '');
   const [subject, setSubject] = useState<Subject>(savedProfile?.subject ?? 'mathematics');
+  const [learningMode, setLearningMode] = useState<LearningMode>(savedProfile?.learningMode ?? 'study_partner');
   const [bloomLevel, setBloomLevel] = useState<BloomLevel>(savedProfile?.bloomLevel ?? 1);
   const [analogyDomain, setAnalogyDomain] = useState<AnalogyDomain>(
     savedProfile?.analogyDomain ?? 'sports',
@@ -72,15 +86,16 @@ export function EdexOnboardingCard({
       subject,
       bloomLevel,
       analogyDomain,
+      learningMode,
     );
     const manager = new LearnerProfileManager(profile);
     manager.startSession();
     manager.save();
     onStartConversation(manager.getProfile());
-  }, [name, subject, bloomLevel, analogyDomain, onStartConversation]);
+  }, [name, subject, bloomLevel, analogyDomain, learningMode, onStartConversation]);
 
 
-  const stepIndex = ['subject', 'bloom', 'analogy', 'ready'].indexOf(step);
+  const stepIndex = ['subject', 'mode', 'bloom', 'analogy', 'ready'].indexOf(step);
 
   return (
     <div
@@ -238,7 +253,7 @@ export function EdexOnboardingCard({
             </div>
 
             <Button
-              onClick={() => setStep('bloom')}
+              onClick={() => setStep('mode')}
               className="w-full mt-1 rounded-xl font-semibold text-sm h-10"
               style={{
                 background: 'hsl(var(--edex-glow))',
@@ -248,6 +263,66 @@ export function EdexOnboardingCard({
             >
               Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
             </Button>
+          </div>
+        )}
+
+        {/* Learning Mode selection */}
+        {step === 'mode' && (
+          <div className="animate-step-enter space-y-2.5">
+            <div className="mb-3">
+              <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'hsl(245 30% 50%)' }}>How do you want to learn today?</p>
+            </div>
+            {LEARNING_MODES.map((m) => (
+              <button
+                key={m}
+                onClick={() => setLearningMode(m)}
+                className="w-full rounded-2xl p-4 text-left transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+                style={{
+                  background: learningMode === m ? 'hsl(245 100% 70% / 0.1)' : 'hsl(245 30% 8%)',
+                  border: learningMode === m ? '1px solid hsl(245 100% 70% / 0.45)' : '1px solid hsl(245 30% 18%)',
+                }}
+                aria-pressed={learningMode === m}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+                    style={{
+                      background: learningMode === m ? 'hsl(245 100% 70% / 0.2)' : 'hsl(245 30% 14%)',
+                      color: learningMode === m ? 'hsl(245 100% 75%)' : 'hsl(245 30% 50%)',
+                    }}
+                  >
+                    {MODE_ICONS[m]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold" style={{ color: learningMode === m ? 'hsl(240 60% 95%)' : 'hsl(245 20% 75%)' }}>
+                        {LEARNING_MODE_EMOJIS[m]} {LEARNING_MODE_LABELS[m]}
+                      </span>
+                    </div>
+                    <p className="text-xs mt-0.5 leading-snug" style={{ color: 'hsl(245 20% 50%)' }}>
+                      {LEARNING_MODE_DESCRIPTIONS[m]}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+            <div className="flex gap-2 mt-3">
+              <Button
+                onClick={() => setStep('subject')}
+                variant="ghost"
+                className="flex-1 rounded-xl h-10 text-sm"
+                style={{ color: 'hsl(245 30% 55%)', border: '1px solid hsl(245 30% 20%)' }}
+              >
+                <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Back
+              </Button>
+              <Button
+                onClick={() => setStep('bloom')}
+                className="flex-[2] rounded-xl font-semibold text-sm h-10"
+                style={{ background: 'hsl(var(--edex-glow))', color: 'hsl(230 35% 4%)', border: 'none' }}
+              >
+                Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         )}
 
