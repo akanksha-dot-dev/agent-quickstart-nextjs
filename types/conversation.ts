@@ -1,4 +1,5 @@
 import type { RTMClient } from 'agora-rtm';
+import type { LearnerProfile } from '@/lib/learner';
 
 export interface AgoraTokenData {
   token: string;
@@ -10,6 +11,8 @@ export interface AgoraTokenData {
 export interface ClientStartRequest {
   requester_id: string;
   channel_name: string;
+  /** Optional learner profile — when present, Lexi's prompt is personalized. */
+  learnerProfile?: LearnerProfile;
 }
 
 export interface StopConversationRequest {
@@ -32,4 +35,5 @@ export interface ConversationComponentProps {
   rtmClient: RTMClient;
   onTokenWillExpire: (uid: string) => Promise<AgoraRenewalTokens>;
   onEndConversation: () => void;
+  learnerProfile?: LearnerProfile;
 }
