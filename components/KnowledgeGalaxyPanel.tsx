@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import type { BloomLevel } from '@/lib/learner';
 import { BLOOM_LABELS, SUBJECT_EMOJIS } from '@/lib/learner';
 import type { Subject } from '@/lib/learner';
