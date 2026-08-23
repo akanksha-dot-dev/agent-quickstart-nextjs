@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import AgoraRTC, {
   useRTCClient,
   useLocalMicrophoneTrack,
@@ -43,7 +44,16 @@ import {
   type QuickstartAgentMetric,
 } from './QuickstartPipelineMetrics';
 import { QuickstartTranscriptPanel } from './QuickstartTranscriptPanel';
+import { BloomHUDPanel } from './BloomHUDPanel';
+import { SessionSummaryPanel } from './SessionSummaryPanel';
 import type { ConversationComponentProps } from '@/types/conversation';
+import type { LearnerProfile } from '@/lib/learner';
+
+// Canvas-only component — lazy load to avoid SSR issues
+const KnowledgeGalaxyPanel = dynamic(
+  () => import('./KnowledgeGalaxyPanel').then((m) => ({ default: m.KnowledgeGalaxyPanel })),
+  { ssr: false },
+);
 
 // Cap the displayed issues list to avoid overwhelming the UI during a cascade of errors.
 const MAX_CONNECTION_ISSUES = 6;
@@ -95,6 +105,7 @@ export default function ConversationComponent({
   rtmClient,
   onTokenWillExpire,
   onEndConversation,
+  learnerProfile,
 }: ConversationComponentProps) {
   const client = useRTCClient();
   const remoteUsers = useRemoteUsers();
@@ -116,6 +127,15 @@ export default function ConversationComponent({
   const [agentMetrics, setAgentMetrics] = useState<QuickstartAgentMetric[]>([]);
   const [connectionIssues, setConnectionIssues] = useState<ConnectionIssue[]>(
     [],
+  );
+
+  // EdexConvoAI: session start time for SessionSummaryPanel
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  // EdexConvoAI: topics detected from transcript turns (lightweight heuristic)
+  const [topicsDiscussed, setTopicsDiscussed] = useState<string[]>([]);
+  // EdexConvoAI: local copy of learner profile (may be updated in-session)
+  const [activeLearnerProfile, setActiveLearnerProfile] = useState<LearnerProfile | undefined>(
+    learnerProfile,
   );
   const addConnectionIssue = useCallback((issue: ConnectionIssue) => {
     setConnectionIssues((prev) => {
@@ -468,6 +488,45 @@ export default function ConversationComponent({
     onEndConversation();
   }, [onEndConversation]);
 
+  // EdexConvoAI: derive galaxy nodes from active profile mastery scores
+  const galaxyNodes = useMemo(() => {
+    if (!activeLearnerProfile) return [];
+    return Object.entries(activeLearnerProfile.masteryScores).map(
+      ([topic, m]) => ({
+        topic,
+        score: m.score,
+        bloomReached: m.bloomReached,
+      }),
+    );
+  }, [activeLearnerProfile]);
+
+  // EdexConvoAI: lightweight topic detection from completed agent transcript turns.
+  // When the agent mentions a topic keyword, add it to the topicsDiscussed list.
+  useEffect(() => {
+    if (messageList.length === 0) return;
+    const lastAgent = [...messageList]
+      .reverse()
+      .find((m) => m.uid !== String(client.uid));
+    if (!lastAgent?.text) return;
+    const text = lastAgent.text.toLowerCase();
+    // Extract potential topic words (capitalized nouns that appear twice in the conversation)
+    const words = text.match(/\b[a-z]{4,}\b/g) ?? [];
+    const candidates = words.filter(
+      (w) =>
+        ![
+          'that', 'this', 'with', 'from', 'have', 'when', 'what', 'your',
+          'will', 'just', 'like', 'know', 'think', 'does', 'about', 'which',
+          'them', 'they', 'more', 'some', 'than', 'then', 'also', 'here',
+        ].includes(w),
+    );
+    if (candidates.length > 0) {
+      setTopicsDiscussed((prev) => {
+        const merged = [...new Set([...prev, candidates[0]])];
+        return merged.slice(0, 12);
+      });
+    }
+  }, [messageList, client.uid]);
+
   return (
     <QuickstartConversationLayout
       statusPanel={
@@ -523,6 +582,35 @@ export default function ConversationComponent({
         </div>
       }
       onEndConversation={handleEndConversation}
+      // EdexConvoAI panels — only rendered when a learner profile is present
+      bloomHUD={
+        activeLearnerProfile ? (
+          <BloomHUDPanel
+            bloomLevel={activeLearnerProfile.bloomLevel}
+            streakCount={activeLearnerProfile.streakCount}
+          />
+        ) : undefined
+      }
+      knowledgeGalaxy={
+        activeLearnerProfile ? (
+          <KnowledgeGalaxyPanel
+            nodes={galaxyNodes}
+            subject={activeLearnerProfile.subject}
+            bloomLevel={activeLearnerProfile.bloomLevel}
+            activeTopic={activeLearnerProfile.currentTopic}
+            streakCount={activeLearnerProfile.streakCount}
+          />
+        ) : undefined
+      }
+      sessionSummary={
+        activeLearnerProfile ? (
+          <SessionSummaryPanel
+            profile={activeLearnerProfile}
+            sessionStartTime={sessionStartTimeRef.current}
+            topicsDiscussed={topicsDiscussed}
+          />
+        ) : undefined
+      }
     />
   );
 }
