@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
       client,
       instructions: systemPrompt,
       greeting,
-      failureMessage: 'Please wait a moment.',
-      maxHistory: 50,
+      failureMessage: 'One moment please.',
+      maxHistory: 50,            // full session memory — Lexi remembers everything said
       // VAD controls how the agent detects the start and end of a user's turn.
       turnDetection: {
         config: {
@@ -123,13 +123,13 @@ export async function POST(request: NextRequest) {
       )
       .withLlm(
         new OpenAI({
-          model: 'gpt-4o',          // upgraded from gpt-4o-mini for better reasoning + memory
+          model: 'gpt-4.1-mini',     // best available managed model (gpt-4.1 series)
           greetingMessage: greeting,
           failureMessage: 'One moment please.',
           maxHistory: 50,            // full session memory — Lexi remembers everything said
           params: {
             max_tokens: 1024,
-            temperature: 0.72,       // slightly more creative for varied questioning
+            temperature: 0.72,
             top_p: 0.95,
           },
         }),
