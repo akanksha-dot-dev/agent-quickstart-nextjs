@@ -2,7 +2,6 @@
 
 import { useState, useRef, Suspense, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import type { RTMClient } from 'agora-rtm';
 import type {
   AgoraTokenData,
@@ -10,9 +9,11 @@ import type {
   AgentResponse,
   AgoraRenewalTokens,
 } from '../types/conversation';
+import type { LearnerProfile } from '@/lib/learner';
+import { LearnerProfileManager } from '@/lib/learner';
 import { ErrorBoundary } from './ErrorBoundary';
 import { LoadingSkeleton } from './LoadingSkeleton';
-import { QuickstartPreCallCard } from './QuickstartPreCallCard';
+import { EdexOnboardingCard } from './EdexOnboardingCard';
 
 // Dynamically import the ConversationComponent with ssr disabled
 const ConversationComponent = dynamic(() => import('./ConversationComponent'), {
@@ -58,28 +59,36 @@ export default function LandingPage() {
   const [showConversation, setShowConversation] = useState(false);
 
   // Preload heavy modules on mount so they're already cached when the user
-  // clicks "Try it Now" — eliminates the ~1.8s dynamic-import delay.
+  // clicks "Start Learning" — eliminates the ~1.8s dynamic-import delay.
   useEffect(() => {
     import('agora-rtc-react').catch(() => {});
     import('agora-rtm').catch(() => {});
   }, []);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [agoraData, setAgoraData] = useState<AgoraTokenData | null>(null);
   const [rtmClient, setRtmClient] = useState<RTMClient | null>(null);
   const [agentJoinError, setAgentJoinError] = useState(false);
+  const [learnerProfile, setLearnerProfile] = useState<LearnerProfile | null>(null);
 
-  const handleStartConversation = async () => {
+  // Load saved profile from localStorage on mount (client-only)
+  const [savedProfile, setSavedProfile] = useState<LearnerProfile | null>(null);
+  useEffect(() => {
+    const manager = LearnerProfileManager.load();
+    setSavedProfile(manager?.getProfile() ?? null);
+  }, []);
+
+  const handleStartConversation = async (profile: LearnerProfile) => {
     setIsLoading(true);
     setError(null);
     setAgentJoinError(false);
+    setLearnerProfile(profile);
 
     try {
       // 1. Fetch RTC token + channel
-      // console.log('Fetching Agora token...');
       const agoraResponse = await fetch('/api/generate-agora-token');
       const responseData = await agoraResponse.json();
-      // console.log('Agora token response: uid =', responseData.uid, 'channel =', responseData.channel);
 
       if (!agoraResponse.ok) {
         throw new Error(
@@ -91,13 +100,14 @@ export default function LandingPage() {
       //    RTM must be ready before ConversationComponent mounts so AgoraVoiceAI
       //    can subscribe immediately. Agent invite is non-fatal.
       const [agentData, rtm] = await Promise.all([
-        // 2a. Start the AI agent
+        // 2a. Start the AI agent with learner profile for personalized Lexi prompt
         fetch('/api/invite-agent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             requester_id: responseData.uid,
             channel_name: responseData.channel,
+            learnerProfile: profile,
           } as ClientStartRequest),
         })
           .then(async (res) => {
@@ -122,7 +132,6 @@ export default function LandingPage() {
           );
           await rtm.login({ token: responseData.token });
           await rtm.subscribe(responseData.channel);
-          // console.log('RTM ready, channel:', responseData.channel);
           return rtm;
         })(),
       ]);
@@ -180,7 +189,6 @@ export default function LandingPage() {
     // Stop the AI agent
     if (agoraData?.agentId) {
       try {
-        // console.log('Stopping agent:', agoraData.agentId);
         const response = await fetch('/api/stop-conversation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -189,10 +197,16 @@ export default function LandingPage() {
         if (!response.ok) {
           console.error('Failed to stop agent:', await response.text());
         }
-        // else console.log('Agent stopped successfully');
       } catch (error) {
         console.error('Error stopping agent:', error);
       }
+    }
+
+    // Save updated learner profile to localStorage
+    if (learnerProfile) {
+      const manager = new LearnerProfileManager(learnerProfile);
+      manager.save();
+      setSavedProfile(manager.getProfile());
     }
 
     // Tear down RTM — owned here since we created it here
@@ -202,8 +216,21 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="relative flex h-dvh min-h-screen flex-col overflow-hidden bg-background text-foreground">
-      {/* Hero shell: either shows the pre-call CTA or swaps in the live conversation experience. */}
+    <div
+      className="relative flex h-dvh min-h-screen flex-col overflow-hidden text-foreground"
+      style={{ background: 'hsl(230 35% 4%)' }}
+    >
+      {/* Subtle nebula background gradient */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 80% 60% at 50% 0%, hsl(245 60% 12% / 0.6) 0%, transparent 70%), radial-gradient(ellipse 60% 50% at 80% 80%, hsl(270 40% 10% / 0.5) 0%, transparent 70%)',
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Hero shell: either shows the pre-call onboarding or swaps in the live conversation. */}
       <div
         className={`flex min-h-0 flex-1 flex-col ${
           showConversation
@@ -219,21 +246,22 @@ export default function LandingPage() {
           }`}
         >
           {!showConversation ? (
-            <QuickstartPreCallCard
+            <EdexOnboardingCard
               isLoading={isLoading}
               error={error}
               onStartConversation={handleStartConversation}
+              savedProfile={savedProfile}
             />
           ) : agoraData && rtmClient ? (
             <>
-              {/* Non-fatal invite warning: the browser session can still render even if agent start failed. */}
+              {/* Non-fatal invite warning */}
               {agentJoinError && (
                 <div className="p-3 bg-destructive/10 rounded-md text-destructive text-sm max-w-sm">
-                  Failed to connect with AI agent. The conversation may not work
+                  Failed to connect with AI tutor. The conversation may not work
                   as expected.
                 </div>
               )}
-              {/* Browser-only conversation mount: RTC provider, error boundary, and lazy-loaded call UI. */}
+              {/* Browser-only conversation mount */}
               <Suspense fallback={<LoadingSkeleton />}>
                 <ErrorBoundary>
                   <AgoraProvider>
@@ -242,13 +270,13 @@ export default function LandingPage() {
                       rtmClient={rtmClient}
                       onTokenWillExpire={handleTokenWillExpire}
                       onEndConversation={handleEndConversation}
+                      learnerProfile={learnerProfile ?? undefined}
                     />
                   </AgoraProvider>
                 </ErrorBoundary>
               </Suspense>
             </>
           ) : (
-            /* Fallback if session bootstrap partially succeeded but required state is missing. */
             <p className="text-sm text-muted-foreground">
               Failed to load conversation data.
             </p>
@@ -256,28 +284,22 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Persistent attribution footer for the pre-call and in-call views. */}
+      {/* Attribution footer */}
       <footer className="fixed bottom-0 right-0 z-40 py-4 pr-4 md:py-6 md:pr-6">
-        <div className="flex items-center justify-end gap-2 text-muted-foreground">
-          <span className="text-xs font-medium tracking-wide uppercase">
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-xs font-medium tracking-wide uppercase" style={{ color: 'hsl(245 30% 40%)' }}>
             Powered by
           </span>
           <a
             href="https://agora.io/en/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-primary transition-colors"
+            className="transition-opacity hover:opacity-70"
             aria-label="Visit Agora's website"
           >
-            <Image
-              src="/agora-logo-rgb-blue.svg"
-              alt="Agora"
-              width={86}
-              height={24}
-              priority
-              className="h-6 w-auto hover:opacity-80 transition-opacity translate-y-1"
-            />
-            <span className="sr-only">Agora</span>
+            <span className="text-xs font-semibold" style={{ color: 'hsl(245 30% 55%)' }}>
+              Agora ConvoAI
+            </span>
           </a>
         </div>
       </footer>
