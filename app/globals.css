@@ -192,3 +192,139 @@ body {
     max-height: 3.5rem;
   }
 }
+
+/* =========================================================
+   EdexConvoAI — Design Extension
+   ========================================================= */
+
+/* Google Fonts — Outfit (headings) + Inter (body) */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* Bloom's Taxonomy level colors */
+  --bloom-1: 214 89% 60%;   /* Remember   — sky blue */
+  --bloom-2: 173 80% 44%;   /* Understand  — teal */
+  --bloom-3: 142 71% 45%;   /* Apply       — green */
+  --bloom-4: 38 92% 50%;    /* Analyze     — amber */
+  --bloom-5: 24 95% 55%;    /* Evaluate    — orange */
+  --bloom-6: 270 70% 60%;   /* Create      — violet */
+
+  /* EdexConvoAI deep space palette */
+  --edex-space:        230 35% 4%;
+  --edex-space-mid:    230 28% 8%;
+  --edex-nebula:       245 60% 12%;
+  --edex-star:         240 60% 98%;
+  --edex-glow:         245 100% 70%;
+  --edex-glow-dim:     245 60% 45%;
+  --edex-accent:       280 80% 65%;   /* purple accent */
+  --edex-gold:         45 95% 60%;    /* streak gold */
+
+  /* Galaxy node colors by mastery tier */
+  --galaxy-novice:   230 40% 35%;
+  --galaxy-learning: 194 80% 45%;
+  --galaxy-skilled:  142 65% 45%;
+  --galaxy-master:   45 90% 55%;
+}
+
+/* EdexConvoAI heading font override */
+.edex-font-heading {
+  font-family: 'Outfit', system-ui, sans-serif;
+}
+.edex-font-body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* --- EdexConvoAI Animations --- */
+
+@keyframes galaxy-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+    box-shadow: 0 0 0 0 hsl(var(--edex-glow) / 0.4);
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+    box-shadow: 0 0 0 12px hsl(var(--edex-glow) / 0);
+  }
+}
+
+@keyframes bloom-fill {
+  from { width: 0%; }
+  to   { width: var(--bloom-target-width, 100%); }
+}
+
+@keyframes streak-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35) rotate(-4deg); }
+  70%  { transform: scale(0.92) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes step-enter {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes node-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Utility classes */
+.animate-galaxy-pulse  { animation: galaxy-pulse 2.4s ease-in-out infinite; }
+.animate-streak-pop    { animation: streak-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-step-enter    { animation: step-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-node-appear   { animation: node-appear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-float         { animation: float 3s ease-in-out infinite; }
+
+/* Edex glassmorphism card */
+.edex-glass {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--edex-space-mid) / 0.92) 0%,
+    hsl(var(--edex-nebula) / 0.85) 100%
+  );
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--edex-glow) / 0.15);
+}
+
+/* Edex shimmer text gradient */
+.edex-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--edex-glow)) 0%,
+    hsl(var(--edex-accent)) 40%,
+    hsl(var(--edex-gold)) 60%,
+    hsl(var(--edex-glow)) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
