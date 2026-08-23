@@ -506,7 +506,8 @@ export default function ConversationComponent({
     if (messageList.length === 0) return;
     const lastAgent = [...messageList]
       .reverse()
-      .find((m) => m.uid !== client.uid?.toString());
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .find((m) => String((m as any).uid) !== String(client.uid ?? ''));
     if (!lastAgent?.text) return;
     const text = lastAgent.text.toLowerCase();
     // Extract potential topic words (capitalized nouns that appear twice in the conversation)
