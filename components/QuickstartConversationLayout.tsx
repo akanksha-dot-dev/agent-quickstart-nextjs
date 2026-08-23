@@ -17,6 +17,10 @@ type QuickstartConversationLayoutProps = {
   bloomHUD?: ReactNode;
   /** EdexConvoAI: Session summary stats */
   sessionSummary?: ReactNode;
+  /** EdexConvoAI: Rotating subject fact below session summary */
+  learningFact?: ReactNode;
+  /** EdexConvoAI: XP earned this session (0-100), renders a progress bar in header */
+  sessionXP?: number;
 };
 
 export function QuickstartConversationLayout({
@@ -29,52 +33,88 @@ export function QuickstartConversationLayout({
   knowledgeGalaxy,
   bloomHUD,
   sessionSummary,
+  learningFact,
+  sessionXP,
 }: QuickstartConversationLayoutProps) {
   const hasEdexPanels = knowledgeGalaxy || bloomHUD || sessionSummary;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col text-left">
-      {/* Header */}
-      <header className="flex shrink-0 flex-col gap-4 border-b border-border px-4 py-4 md:h-[76px] md:flex-row md:items-center md:justify-between md:px-6 md:py-0">
-        <div className="flex min-w-0 items-center gap-3">
-          {/* EdexConvoAI brand */}
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-            style={{
-              background:
-                'linear-gradient(135deg, hsl(245 100% 70% / 0.2) 0%, hsl(270 80% 65% / 0.15) 100%)',
-              border: '1px solid hsl(245 100% 70% / 0.25)',
-            }}
-          >
-            <Sparkles className="h-5 w-5" style={{ color: 'hsl(245 100% 72%)' }} />
-          </div>
-          <div className="flex min-w-0 flex-col justify-center gap-1">
-            <span
-              className="edex-font-heading truncate text-lg font-semibold leading-none tracking-[-0.025em]"
-              style={{ color: 'hsl(240 60% 98%)' }}
+      {/* ── Header ───────────────────────────────────────────── */}
+      <header className="flex shrink-0 flex-col gap-2 border-b border-border px-4 py-3 md:px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            {/* EdexConvoAI brand badge */}
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+              style={{
+                background:
+                  'linear-gradient(135deg, hsl(245 100% 70% / 0.2) 0%, hsl(270 80% 65% / 0.15) 100%)',
+                border: '1px solid hsl(245 100% 70% / 0.25)',
+              }}
             >
-              EdexConvoAI
-            </span>
-            {pipelineMetrics}
+              <Sparkles className="h-5 w-5" style={{ color: 'hsl(245 100% 72%)' }} />
+            </div>
+
+            <div className="flex min-w-0 flex-col justify-center gap-1">
+              <span
+                className="edex-font-heading truncate text-lg font-semibold leading-none tracking-[-0.025em]"
+                style={{ color: 'hsl(240 60% 98%)' }}
+              >
+                EdexConvoAI
+              </span>
+              {pipelineMetrics}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 md:pr-1">
+            {statusPanel}
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-8 rounded-md border border-destructive bg-transparent px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
+              onClick={onEndConversation}
+              aria-label="End conversation with AI tutor"
+              title="End conversation"
+            >
+              End Session
+            </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 md:pr-1">
-          {statusPanel}
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-8 rounded-md border border-destructive bg-transparent px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
-            onClick={onEndConversation}
-            aria-label="End conversation with AI tutor"
-            title="End conversation"
-          >
-            End Session
-          </Button>
-        </div>
+        {/* Session XP bar */}
+        {sessionXP !== undefined && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'hsl(245 30% 48%)' }}>
+              Session XP
+            </span>
+            <div
+              className="h-1 flex-1 overflow-hidden rounded-full"
+              style={{ background: 'hsl(245 30% 14%)' }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-1000 ease-out"
+                style={{
+                  width: `${Math.min(100, Math.max(0, sessionXP))}%`,
+                  background:
+                    'linear-gradient(90deg, hsl(245 100% 65%), hsl(270 70% 65%), hsl(45 95% 60%))',
+                  boxShadow: '0 0 8px hsl(245 100% 65% / 0.5)',
+                }}
+                role="progressbar"
+                aria-valuenow={sessionXP}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Session XP: ${Math.round(sessionXP)}%`}
+              />
+            </div>
+            <span className="text-[10px] font-bold tabular-nums" style={{ color: 'hsl(245 100% 72%)' }}>
+              {Math.round(sessionXP)}%
+            </span>
+          </div>
+        )}
       </header>
 
-      {/* Main layout: left rail + center + optional EdexConvoAI right rail */}
+      {/* ── Main layout ──────────────────────────────────────── */}
       <div className="flex min-h-0 w-full flex-1 flex-col gap-4 px-4 pb-4 pt-4 md:px-6 lg:flex-row lg:gap-0">
 
         {/* LEFT: Transcript */}
@@ -92,14 +132,15 @@ export function QuickstartConversationLayout({
           </div>
         </main>
 
-        {/* RIGHT RAIL: EdexConvoAI panels (optional) */}
+        {/* RIGHT RAIL: EdexConvoAI panels */}
         {hasEdexPanels && (
           <aside
-            className="order-3 flex h-auto min-h-0 w-full shrink-0 flex-col gap-4 lg:h-full lg:w-[18rem] lg:border-l lg:border-border/80 lg:pl-5 lg:pt-3"
+            className="order-3 flex h-auto min-h-0 w-full shrink-0 flex-col gap-4 lg:h-full lg:w-[18rem] lg:border-l lg:border-border/80 lg:pl-5 lg:pt-3 lg:overflow-y-auto"
           >
             {bloomHUD}
             {knowledgeGalaxy}
             {sessionSummary}
+            {learningFact}
           </aside>
         )}
       </div>
