@@ -7,6 +7,29 @@
 
 export type BloomLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
+export type LearningMode = 'study_partner' | 'viva_prep' | 'quiz_mode' | 'revision';
+
+export const LEARNING_MODE_LABELS: Record<LearningMode, string> = {
+  study_partner: 'Study Partner',
+  viva_prep:     'Viva / Interview Prep',
+  quiz_mode:     'Quiz Mode',
+  revision:      'Revision Sprint',
+};
+
+export const LEARNING_MODE_DESCRIPTIONS: Record<LearningMode, string> = {
+  study_partner: 'Socratic exploration — Lexi guides you to discover concepts through questions',
+  viva_prep:     'Simulated oral exam — structured feedback and performance report at the end',
+  quiz_mode:     'Rapid-fire questions with instant scoring and XP rewards',
+  revision:      'Target weak areas using spaced repetition and adaptive difficulty',
+};
+
+export const LEARNING_MODE_EMOJIS: Record<LearningMode, string> = {
+  study_partner: '🤝',
+  viva_prep:     '🎓',
+  quiz_mode:     '⚡',
+  revision:      '🔄',
+};
+
 export const BLOOM_LABELS: Record<BloomLevel, string> = {
   1: 'Remember',
   2: 'Understand',
@@ -85,11 +108,16 @@ export interface LearnerProfile {
   subject: Subject;
   bloomLevel: BloomLevel;
   analogyDomain: AnalogyDomain;
+  learningMode: LearningMode;
   masteryScores: Record<string, TopicMastery>;  // topic slug → mastery
   streakCount: number;
   totalSessions: number;
   lastSessionAt: number | null;  // Unix timestamp ms
   currentTopic: string | null;
+  /** Mistakes made in previous sessions — injected into Lexi's prompt for cross-session memory */
+  previousSessionMistakes: string[];
+  /** Summary sentence from the last session report — gives Lexi continuity */
+  previousSessionSummary: string | null;
 }
 
 const STORAGE_KEY = 'edex_convoai_learner_v1';
@@ -116,6 +144,7 @@ export function createDefaultProfile(
   subject: Subject,
   bloomLevel: BloomLevel,
   analogyDomain: AnalogyDomain,
+  learningMode: LearningMode = 'study_partner',
 ): LearnerProfile {
   return {
     version: CURRENT_VERSION,
@@ -123,11 +152,14 @@ export function createDefaultProfile(
     subject,
     bloomLevel,
     analogyDomain,
+    learningMode,
     masteryScores: {},
     streakCount: 0,
     totalSessions: 0,
     lastSessionAt: null,
     currentTopic: null,
+    previousSessionMistakes: [],
+    previousSessionSummary: null,
   };
 }
 
