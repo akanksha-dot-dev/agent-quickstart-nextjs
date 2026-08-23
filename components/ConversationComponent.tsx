@@ -46,6 +46,9 @@ import {
 import { QuickstartTranscriptPanel } from './QuickstartTranscriptPanel';
 import { BloomHUDPanel } from './BloomHUDPanel';
 import { SessionSummaryPanel } from './SessionSummaryPanel';
+import { LexiAvatarPanel } from './LexiAvatarPanel';
+import { AchievementToast, type Achievement } from './AchievementToast';
+import { LearningFactTicker } from './LearningFactTicker';
 import type { ConversationComponentProps } from '@/types/conversation';
 import type { LearnerProfile } from '@/lib/learner';
 
@@ -138,6 +141,15 @@ export default function ConversationComponent({
   const [activeLearnerProfile, _setActiveLearnerProfile] = useState<LearnerProfile | undefined>(
     learnerProfile,
   );
+  // EdexConvoAI: achievement notifications
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const triggeredAchievementsRef = useRef<Set<string>>(new Set());
+
+  const triggerAchievement = useCallback((achievement: Achievement) => {
+    if (triggeredAchievementsRef.current.has(achievement.id)) return;
+    triggeredAchievementsRef.current.add(achievement.id);
+    setAchievements((prev) => [...prev, achievement]);
+  }, []);
 
   const addConnectionIssue = useCallback((issue: ConnectionIssue) => {
     setConnectionIssues((prev) => {
