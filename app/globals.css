@@ -2,7 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light theme (default). Dark tokens apply when the OS prefers dark mode. */
+/* Google Fonts — Outfit (headings) + Inter (body) */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+
 :root {
   color-scheme: light;
 
@@ -196,9 +199,6 @@ body {
 /* =========================================================
    EdexConvoAI — Design Extension
    ========================================================= */
-
-/* Google Fonts — Outfit (headings) + Inter (body) */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
 :root {
   /* Bloom's Taxonomy level colors */
